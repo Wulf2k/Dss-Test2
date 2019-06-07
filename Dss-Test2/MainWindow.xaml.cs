@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Threading;
 using DarkSoulsScripting;
@@ -12,6 +13,9 @@ namespace Dss_Test2
     /// </summary>
     public partial class MainWindow : Window
     {
+
+
+        /*
         [StructLayout(LayoutKind.Sequential)]
         public struct SECURITY_ATTRIBUTES
         {
@@ -51,6 +55,8 @@ namespace Dss_Test2
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         static extern bool CreateProcess(string lpApplicationName, string lpCommandLine, ref SECURITY_ATTRIBUTES lpProcessAttributes, ref SECURITY_ATTRIBUTES lpThreadAttributes,
            bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, string lpCurrentDirectory, [In] ref STARTUPINFO lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
+        */
+      
         [DllImport("ntdll.dll", SetLastError = true)]
         public static extern IntPtr NtResumeProcess(IntPtr ProcessHandle);
         [DllImport("ntdll.dll", SetLastError = false)]
@@ -58,14 +64,15 @@ namespace Dss_Test2
 
 
         public System.Windows.Forms.Timer refresh = new System.Windows.Forms.Timer();
-
+        Process DS = new Process();
 
 
         public string ipc = "";
-        PROCESS_INFORMATION pInfo = new PROCESS_INFORMATION();
+        //PROCESS_INFORMATION pInfo = new PROCESS_INFORMATION();
 
         void Poo()
         {
+            /*
             bool retvalue;
             const uint NORMAL_PRIORITY_CLASS = 0x0020;
 
@@ -75,6 +82,8 @@ namespace Dss_Test2
             pSec.nLength = Marshal.SizeOf(pSec);
             tSec.nLength = Marshal.SizeOf(tSec);
             sInfo.cb = Marshal.SizeOf(sInfo);
+            */
+
 
             //Find DSR location
             //HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 570940\InstallLocation
@@ -83,11 +92,25 @@ namespace Dss_Test2
 
             System.IO.File.WriteAllText($"{currDir}\\steam_appid.txt", "570940");
 
+
+
+            /*
             retvalue = CreateProcess(Application, "",
              ref pSec, ref tSec, false, NORMAL_PRIORITY_CLASS,
              IntPtr.Zero, currDir, ref sInfo, out pInfo);
+             */
 
-            Hook.DARKSOULS.TryAttachToDarkSouls(pInfo.dwProcessId);
+            DS.StartInfo.FileName = Application;
+            DS.StartInfo.RedirectStandardError = true;
+            DS.StartInfo.RedirectStandardOutput = true;
+            DS.StartInfo.UseShellExecute = false;
+            DS.StartInfo.WorkingDirectory = currDir;
+
+            DS.Start();
+
+            refresh.Enabled = true;
+
+            Hook.DARKSOULS.TryAttachToDarkSouls(DS.Id);
             output($"Launched PID {Hook.DARKSOULS.GetHandle()}\n");
 
 
@@ -113,10 +136,16 @@ namespace Dss_Test2
             bool loop = true;
             while (loop && ((int) Hook.DARKSOULS.GetHandle() > 0))
             {
-                loop = (Hook.RInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(0x141c04e28) + 0x8) + 0x20) + 0x58) + 0x20) + 0x10) < 65);
+                loop = (Hook.RInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(0x141c04e28) + 0x8) + 0x20) + 0x58) + 0x20) + 0x10) < 0xB);
                 Thread.Sleep(33);
             }
             output("Reached titlescreen\n");
+
+            if (GameMan.IsOnlineMode)
+            {
+                output("WOAH, dude.  Play in offline mode instead.\n");
+                Hook.WInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(0x141c04e28) + 0x8) + 0x20) + 0x58) + 0x20) + 0x10, 0x80);
+            }
 
             //Charinit ids
             //2400 = None, 2408 = Ring of old witch
@@ -200,18 +229,32 @@ namespace Dss_Test2
 
             refresh.Tick += OnTimedEvent;
             refresh.Interval = 50;
-            refresh.Enabled = true;
-            this.Topmost = true;
+            refresh.Enabled = false;
+
         }
 
 
         public void OnTimedEvent(object sender, EventArgs e)
         {
+            
             lock (ipc)
             {
                 txtOutput.AppendText(ipc);
                 ipc = "";
             }
+
+            if (Hook.DARKSOULS.Attached)
+            {
+                if (!DS.StandardOutput.EndOfStream)
+                {
+                    output($"DSStandardOutput: {DS.StandardOutput.ReadLine()}\n");
+                }
+                if (!DS.StandardError.EndOfStream)
+                {
+                    output($"DSErrorOutput: {DS.StandardError.ReadLine()}\n");
+                }
+            }
+
         }
 
         public void output(string txt)
@@ -222,51 +265,27 @@ namespace Dss_Test2
 
         private void BtnLaunch_Click(object sender, RoutedEventArgs e)
         {
-            bool retvalue;
-            const uint NORMAL_PRIORITY_CLASS = 0x0020;
-
-            STARTUPINFO sInfo = new STARTUPINFO();
-            SECURITY_ATTRIBUTES pSec = new SECURITY_ATTRIBUTES();
-            SECURITY_ATTRIBUTES tSec = new SECURITY_ATTRIBUTES();
-            pSec.nLength = Marshal.SizeOf(pSec);
-            tSec.nLength = Marshal.SizeOf(tSec);
-            sInfo.cb = Marshal.SizeOf(sInfo);
-
-
-            //HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 570940\InstallLocation
             string currDir = Microsoft.Win32.Registry.GetValue("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App 570940", "InstallLocation", null).ToString();
             string Application = $"{currDir}\\DarkSoulsRemastered.exe";
 
-            System.IO.File.WriteAllText($"{currDir}\\steam_appid.txt", "570940");
+            DS.StartInfo.FileName = Application;
+            DS.StartInfo.RedirectStandardError = true;
+            DS.StartInfo.RedirectStandardOutput = true;
+            DS.StartInfo.UseShellExecute = false;
 
-            retvalue = CreateProcess(Application, "",
-                 ref pSec, ref tSec, false, NORMAL_PRIORITY_CLASS,
-                 IntPtr.Zero, currDir, ref sInfo, out pInfo);
-
-
-            output($"Process ID {pInfo.dwProcessId} started, suspended\n\n");
-            output($"Select your options then resume.\n");
-
-            Hook.DARKSOULS.TryAttachToDarkSouls(pInfo.dwProcessId);
-
-            //loggerman 141D06848
-            //Wait till UserMan exists
-            //while ((Hook.RIntPtr(0x141D06738) == IntPtr.Zero) && ((int)Hook.DARKSOULS.GetHandle() > 0))
-            //while ((Hook.RIntPtr(0x141c04e28) == IntPtr.Zero) && ((int)Hook.DARKSOULS.GetHandle() > 0))
-            {
-
-            }
-            NtSuspendProcess(pInfo.hProcess);
+            DS.Start();
+            refresh.Enabled = true;
         }
 
         private void BtnPooromancer_Click(object sender, RoutedEventArgs e)
         {
             new Thread(Poo).Start();
+            
         }
 
         private void BtnResume_Click(object sender, RoutedEventArgs e)
         {
-            NtResumeProcess(pInfo.hProcess);
+            NtResumeProcess(DS.Handle);
         }
 
         private void BtnNoLogo_Click(object sender, RoutedEventArgs e)

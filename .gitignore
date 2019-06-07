@@ -1,0 +1,8 @@
+
+*.dll
+*.pdb
+.vs/Dss-Test2/v15/.suo
+*.ide
+*.exe
+*.resources
+*.cache
