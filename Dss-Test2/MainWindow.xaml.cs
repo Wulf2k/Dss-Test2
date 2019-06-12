@@ -255,6 +255,14 @@ namespace Dss_Test2
                 }
             }
 
+
+
+
+            txtOutput.Text = $"SysStep: {FrpgSystem.Sys.Step}\n";
+            txtOutput.AppendText($"TitleStep: {FrpgSystem.Title.Step}\n");
+            txtOutput.AppendText($"InGameStep: {FrpgSystem.InGame.Step}\n");
+            txtOutput.AppendText($"InGameStayStep: {FrpgSystem.InGameStay.Step}\n");
+            txtOutput.AppendText($"CommonMenuStep: {FrpgSystem.CommonMenu.Step}\n");
         }
 
         public void output(string txt)
@@ -272,9 +280,14 @@ namespace Dss_Test2
             DS.StartInfo.RedirectStandardError = true;
             DS.StartInfo.RedirectStandardOutput = true;
             DS.StartInfo.UseShellExecute = false;
+            DS.StartInfo.WorkingDirectory = currDir;
 
             DS.Start();
+
             refresh.Enabled = true;
+
+            Hook.DARKSOULS.TryAttachToDarkSouls(DS.Id);
+            output($"Launched PID {Hook.DARKSOULS.GetHandle()}\n");
         }
 
         private void BtnPooromancer_Click(object sender, RoutedEventArgs e)

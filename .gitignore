@@ -6,3 +6,9 @@
 *.exe
 *.resources
 *.cache
+*.exe
+*.pdb
+*.cache
+*.cache
+*.txt
+*.exe
