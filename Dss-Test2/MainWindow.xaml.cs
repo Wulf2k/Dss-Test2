@@ -264,6 +264,8 @@ namespace Dss_Test2
             txtOutput.AppendText($"InGameStayStep: {FrpgSystem.InGameStay.Step}\n");
             txtOutput.AppendText($"CommonMenuStep: {FrpgSystem.CommonMenu.Step}\n");
             txtOutput.AppendText($"ChrBegin: {WorldChrMan.ChrsBegin.ToString("x")}\n");
+            txtOutput.AppendText($"MapEntry: {Map.GetCurrent().GetName()}\n");
+
         }
 
         public void output(string txt)
@@ -289,6 +291,9 @@ namespace Dss_Test2
 
             Hook.DARKSOULS.TryAttachToDarkSouls(DS.Id);
             output($"Launched PID {Hook.DARKSOULS.GetHandle()}\n");
+
+            while (FrpgSystem.Address == IntPtr.Zero) { }
+            NtSuspendProcess(DS.Handle);
         }
 
         private void BtnPooromancer_Click(object sender, RoutedEventArgs e)
