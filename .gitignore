@@ -12,3 +12,6 @@
 *.cache
 *.txt
 *.exe
+*.dll
+*.pdb
+*.exe

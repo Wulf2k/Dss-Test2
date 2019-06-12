@@ -263,6 +263,7 @@ namespace Dss_Test2
             txtOutput.AppendText($"InGameStep: {FrpgSystem.InGame.Step}\n");
             txtOutput.AppendText($"InGameStayStep: {FrpgSystem.InGameStay.Step}\n");
             txtOutput.AppendText($"CommonMenuStep: {FrpgSystem.CommonMenu.Step}\n");
+            txtOutput.AppendText($"ChrBegin: {WorldChrMan.ChrsBegin.ToString("x")}\n");
         }
 
         public void output(string txt)
