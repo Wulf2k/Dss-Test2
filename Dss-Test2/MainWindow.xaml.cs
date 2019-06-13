@@ -309,8 +309,23 @@ namespace Dss_Test2
 
         private void BtnNoLogo_Click(object sender, RoutedEventArgs e)
         {
-            output($"Applying NoLogo\n");
-            Hook.WByte(0x14070C599, 1);
+            string currDir = Microsoft.Win32.Registry.GetValue("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App 570940", "InstallLocation", null).ToString();
+            string Application = $"{currDir}\\DarkSoulsRemastered.exe";
+
+            DS.StartInfo.FileName = Application;
+            DS.StartInfo.RedirectStandardError = true;
+            DS.StartInfo.RedirectStandardOutput = true;
+            DS.StartInfo.UseShellExecute = false;
+            DS.StartInfo.WorkingDirectory = currDir;
+
+            DS.Start();
+
+            refresh.Enabled = true;
+
+            Hook.DARKSOULS.TryAttachToDarkSouls(DS.Id);
+            output($"Launched PID {Hook.DARKSOULS.GetHandle()}\n");
+
+            while (FrpgSystem.Address == IntPtr.Zero) { }
         }
 
         private void BtnDbgMenu_Click(object sender, RoutedEventArgs e)
