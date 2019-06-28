@@ -1,0 +1,1 @@
+This is just a project including the Dark Souls Scripting project that I'm going to use for whatever the hell I'm dabbling with at the moment.  Don't expect anything amazing out of this, but maybe some rather random examples of different things that can be done with DSS.
