@@ -222,9 +222,9 @@ namespace Dss_Test2
                 MsgMan.MenuOthersMsg.Msg(401301, "Pootinue"); //Continue
                 MsgMan.MenuOthersMsg.Msg(401302, "Load Dump"); //Load Game
                 MsgMan.MenuOthersMsg.Msg(401303, "Poo Game"); //New Game
-                                                              //MsgMan.MenuOthersMsg.Msg(401304, ""); //System
+                //MsgMan.MenuOthersMsg.Msg(401304, ""); //System
                 MsgMan.MenuOthersMsg.Msg(401306, "Log"); //Log In
-                                                         //MsgMan.MenuOthersMsg.Msg(401309, ""); //Quit
+                //MsgMan.MenuOthersMsg.Msg(401309, ""); //Quit
                 MsgMan.MenuOthersMsg.Msg(401311, "Dispoonected");
                 MsgMan.MenuOthersMsg.Msg(401320, "Poo ver.");
                 MsgMan.MenuOthersMsg.Msg(401322, "Irregular ver.");
@@ -236,6 +236,7 @@ namespace Dss_Test2
 
                 Params charInit = ParamMan.FindParams("CharaInitParam");
                 //Item1 = 293, quantity = 1, for each starting class
+                //Last 3 gifts reported not working, confirm item category
                 IntPtr gift;
                 for (int i = 0; i < 10; i++)
                 {
