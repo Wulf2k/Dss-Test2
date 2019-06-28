@@ -17,8 +17,6 @@
         </Grid.ColumnDefinitions>
         <Button x:Name="btnPooromancer" Content="Poomancer" HorizontalAlignment="Left" Margin="4,220,0,0" VerticalAlignment="Top" Width="75" Click="BtnPooromancer_Click"/>
         <TextBox x:Name="txtOutput" HorizontalAlignment="Left" Height="449" Margin="84,35,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="590" Grid.ColumnSpan="2" ScrollViewer.CanContentScroll="True"/>
-        <Button x:Name="btnLaunch" Content="Launch" HorizontalAlignment="Left" Margin="4,10,0,0" VerticalAlignment="Top" Width="75" Click="BtnLaunch_Click"/>
-        <Button x:Name="btnResume" Content="Resume" HorizontalAlignment="Left" Margin="84,10,0,0" VerticalAlignment="Top" Width="75" Click="BtnResume_Click"/>
         <Button x:Name="btnNoLogo" Content="NoLogo" HorizontalAlignment="Left" Margin="4,35,0,0" VerticalAlignment="Top" Width="75" Click="BtnNoLogo_Click"/>
         <Button x:Name="btnDbgMenu" Content="DbgMenu" HorizontalAlignment="Left" Margin="4,60,0,0" VerticalAlignment="Top" Width="75" Click="BtnDbgMenu_Click"/>
         <Button x:Name="btnProto" Content="Proto" HorizontalAlignment="Left" Margin="4,85,0,0" VerticalAlignment="Top" Width="75" Click="BtnProto_Click"/>

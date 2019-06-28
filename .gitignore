@@ -18,3 +18,5 @@
 *.ide-wal
 *.ide
 .vs/Dss-Test2/v16/.suo
+obj/
+bin/
