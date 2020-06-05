@@ -86,15 +86,15 @@ namespace Dss_Test2
         void NukeServerNames()
         {
             output($"Nuking FromSoft server names.\n");
-            Hook.WAsciiStr(0x1413ff8c8, "tcp://nope.nope");
-            Hook.WAsciiStr(0x1413ff900, "tcp://nope.nope");
-            Hook.WAsciiStr(0x1413ff938, "tcp://nope.nope");
-            Hook.WAsciiStr(0x1413ff970, "tcp://nope.nope");
-            Hook.WAsciiStr(0x1713ff9a8, "tcp://nope.nope");
-            Hook.WAsciiStr(0x1413ff9e0, "tcp://nope.nope");
-            Hook.WAsciiStr(0x1413ffa18, "tcp://nope.nope");
-            Hook.WAsciiStr(0x1413ffa50, "tcp://nope.nope");
-            Hook.WAsciiStr(0x1413ffa88, "tcp://nope.nope");
+            Hook.WAsciiStr(0x1413ff8c8, "tcp://nope.nope\0");
+            Hook.WAsciiStr(0x1413ff900, "tcp://nope.nope\0");
+            Hook.WAsciiStr(0x1413ff938, "tcp://nope.nope\0");
+            Hook.WAsciiStr(0x1413ff970, "tcp://nope.nope\0");
+            Hook.WAsciiStr(0x1713ff9a8, "tcp://nope.nope\0");
+            Hook.WAsciiStr(0x1413ff9e0, "tcp://nope.nope\0");
+            Hook.WAsciiStr(0x1413ffa18, "tcp://nope.nope\0");
+            Hook.WAsciiStr(0x1413ffa50, "tcp://nope.nope\0");
+            Hook.WAsciiStr(0x1413ffa88, "tcp://nope.nope\0");
         }
 
 
@@ -105,6 +105,12 @@ namespace Dss_Test2
             refresh.Tick += OnTimedEvent;
             refresh.Interval = 50;
             refresh.Enabled = true;
+
+            if (Hook.RInt32(0x140000000) == 0x905a4d)
+            {
+                output("Existing DSR session found, please exit and relaunch.");
+            }
+
         }
 
         public void OnTimedEvent(object sender, EventArgs e)
@@ -303,6 +309,88 @@ namespace Dss_Test2
             this.Close();
         }
 
+        private void btnRelaunch_Click(object sender, RoutedEventArgs e)
+        {
+            output(WorldChrMan.LocalPlayer.Slot.Address.ToString("x"));
+        }
+
+        private void BtnBleedDisp_Click(object sender, RoutedEventArgs e)
+        {
+            new Thread(BleedDisp).Start();
+            
+        }
+
+        void BleedDisp()
+        {
+            Launch();
+            WaitFrpgSysInit();
+            SetNoLogo();
+            NukeServerNames();
+
+            WaitForTitle();
+
+            //Display Lock target pos updating
+            //Hook.WBytes(0x140719AEA, new byte[] { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 });
+
+            while (true)
+            {
+
+                ChrDbg.PlayerHide = true;
+                ChrDbg.PlayerNoDead = true;
+                ChrDbg.ShowAltimeter = MenuMan.LockIconVisible;
+                //ChrDbg.ShowCompass = true;
+                //ChrDbg.ShowHeading = true;
+
+                //141335890
+                IntPtr altGraphX = (IntPtr)0x141335890;
+
+
+                IntPtr l1p1x = (IntPtr)0x1413358E0;
+                IntPtr l1p1y = (IntPtr)0x1413358e4;
+
+                IntPtr l1p2x = (IntPtr)0x141335910;
+                IntPtr l1p2y = (IntPtr)0x141335914;
+
+                IntPtr l2p1x = (IntPtr)0x1413358f0;
+                IntPtr l2p1y = (IntPtr)0x1413358f4;
+
+                IntPtr l2p2x = (IntPtr)0x141335900;
+                IntPtr l2p2y = (IntPtr)0x141335904;
+
+                IntPtr altTextX = (IntPtr)0x141335920;
+
+                Hook.WFloat(altGraphX, -500);
+                Hook.WFloat(altTextX, -500);
+
+                Point tgt = new Point(0, 0);
+
+                if (MenuMan.LockIconVisible)
+                {
+                    Enemy target = WorldChrMan.LocalPlayer.GetTargetAsEnemy();
+                    WorldChrMan.LocalPlayer.Stats.Souls = target.BleedResist;
+
+                    tgt.X = MenuMan.LockIconXPos;
+                    tgt.Y = MenuMan.LockIconYPos;
+
+                    Hook.WFloat(l1p1x,(float)tgt.X + 70);
+                    Hook.WFloat(l1p1y, (float)tgt.Y - 20);
+
+                    Hook.WFloat(l1p2x, (float)tgt.X + 70);
+                    Hook.WFloat(l1p2y, (float)tgt.Y + 20);
+
+                    Hook.WFloat(l2p1x, (float)tgt.X + 90);
+                    Hook.WFloat(l2p1y, (float)tgt.Y - 20);
+
+                    Hook.WFloat(l2p2x, (float)tgt.X + 90);
+                    Hook.WFloat(l2p2y, (float)tgt.Y + 20);
+
+                }
+
+                Thread.Sleep(10);
+            }
+
+            
+        }
     }
 
 }
