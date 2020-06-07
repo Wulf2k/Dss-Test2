@@ -324,72 +324,85 @@ namespace Dss_Test2
         {
             Launch();
             WaitFrpgSysInit();
+            Hook.WByte(0x14015af49, 0xc3);
             SetNoLogo();
             NukeServerNames();
-
             WaitForTitle();
 
-            //Display Lock target pos updating
-            //Hook.WBytes(0x140719AEA, new byte[] { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 });
+            try
+            {
+                while (true)
+                {
 
-            while (true)
+                    //ChrDbg.PlayerHide = true;
+                    //ChrDbg.PlayerNoDead = true;
+                    ChrDbg.ShowAltimeter = MenuMan.LockIconVisible;
+                    GameRend.DisplayVelocityMap = MenuMan.LockIconVisible;
+                    RenderTargetMan.VelocityMapFilter = 0x8000002e;
+
+                    //01 crash
+                    //02 07 0d 0f 11
+                    //13
+                    //1b yellow, velocity map
+                    //25 28 2a
+                    //2e red
+                    //0x79 = white visible
+                    //0x7c, 7d, 8a, 
+
+                    IntPtr altGraphX = (IntPtr)0x141335890;
+
+                    IntPtr l1p1x = (IntPtr)0x1413358E0;
+                    IntPtr l1p1y = (IntPtr)0x1413358e4;
+
+                    IntPtr l1p2x = (IntPtr)0x141335910;
+                    IntPtr l1p2y = (IntPtr)0x141335914;
+
+                    IntPtr l2p1x = (IntPtr)0x1413358f0;
+                    IntPtr l2p1y = (IntPtr)0x1413358f4;
+
+                    IntPtr l2p2x = (IntPtr)0x141335900;
+                    IntPtr l2p2y = (IntPtr)0x141335904;
+
+                    IntPtr altTextX = (IntPtr)0x141335920;
+
+                    Hook.WFloat(altGraphX, -500);
+                    Hook.WFloat(altTextX, -500);
+
+                    Point tgt = new Point(0, 0);
+
+                    GameRend.VelocityMapHeight = 10;
+                    if (MenuMan.LockIconVisible)
+                    {
+                        Enemy target = WorldChrMan.LocalPlayer.GetTargetAsEnemy();
+                        float BleedRatio = ((float)target.BleedResist / (float)target.MaxBleedResist);
+                        GameRend.VelocityMapWidth = 200 * BleedRatio;
+
+                        tgt.X = MenuMan.LockIconXPos;
+                        tgt.Y = MenuMan.LockIconYPos;
+
+                        GameRend.VelocityMapXPos = (float)tgt.X - (100 - GameRend.VelocityMapWidth / 2);
+                        GameRend.VelocityMapYPos = (float)tgt.Y - 50;
+
+                        Hook.WFloat(l1p1x, (float)tgt.X - 100);
+                        Hook.WFloat(l1p1y, (float)tgt.Y - 55);
+
+                        Hook.WFloat(l1p2x, (float)tgt.X - 100);
+                        Hook.WFloat(l1p2y, (float)tgt.Y - 45);
+
+                        Hook.WFloat(l2p1x, (float)tgt.X + 100);
+                        Hook.WFloat(l2p1y, (float)tgt.Y - 55);
+
+                        Hook.WFloat(l2p2x, (float)tgt.X + 100);
+                        Hook.WFloat(l2p2y, (float)tgt.Y - 45);
+                    }
+
+                    Thread.Sleep(10);
+                }
+            }
+            catch
             {
 
-                ChrDbg.PlayerHide = true;
-                ChrDbg.PlayerNoDead = true;
-                ChrDbg.ShowAltimeter = MenuMan.LockIconVisible;
-                //ChrDbg.ShowCompass = true;
-                //ChrDbg.ShowHeading = true;
-
-                //141335890
-                IntPtr altGraphX = (IntPtr)0x141335890;
-
-
-                IntPtr l1p1x = (IntPtr)0x1413358E0;
-                IntPtr l1p1y = (IntPtr)0x1413358e4;
-
-                IntPtr l1p2x = (IntPtr)0x141335910;
-                IntPtr l1p2y = (IntPtr)0x141335914;
-
-                IntPtr l2p1x = (IntPtr)0x1413358f0;
-                IntPtr l2p1y = (IntPtr)0x1413358f4;
-
-                IntPtr l2p2x = (IntPtr)0x141335900;
-                IntPtr l2p2y = (IntPtr)0x141335904;
-
-                IntPtr altTextX = (IntPtr)0x141335920;
-
-                Hook.WFloat(altGraphX, -500);
-                Hook.WFloat(altTextX, -500);
-
-                Point tgt = new Point(0, 0);
-
-                if (MenuMan.LockIconVisible)
-                {
-                    Enemy target = WorldChrMan.LocalPlayer.GetTargetAsEnemy();
-                    WorldChrMan.LocalPlayer.Stats.Souls = target.BleedResist;
-
-                    tgt.X = MenuMan.LockIconXPos;
-                    tgt.Y = MenuMan.LockIconYPos;
-
-                    Hook.WFloat(l1p1x,(float)tgt.X + 70);
-                    Hook.WFloat(l1p1y, (float)tgt.Y - 20);
-
-                    Hook.WFloat(l1p2x, (float)tgt.X + 70);
-                    Hook.WFloat(l1p2y, (float)tgt.Y + 20);
-
-                    Hook.WFloat(l2p1x, (float)tgt.X + 90);
-                    Hook.WFloat(l2p1y, (float)tgt.Y - 20);
-
-                    Hook.WFloat(l2p2x, (float)tgt.X + 90);
-                    Hook.WFloat(l2p2y, (float)tgt.Y + 20);
-
-                }
-
-                Thread.Sleep(10);
             }
-
-            
         }
     }
 
