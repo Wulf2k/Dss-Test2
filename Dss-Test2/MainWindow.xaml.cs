@@ -4,6 +4,10 @@ using System.Windows;
 using System.Threading;
 using DarkSoulsScripting;
 using System.Runtime.InteropServices;
+using Iced.Intel;
+using DarkSoulsScripting.Injection.Structures;
+using static Iced.Intel.AssemblerRegisters;
+using System.IO;
 
 namespace Dss_Test2
 {
@@ -311,7 +315,220 @@ namespace Dss_Test2
 
         private void btnRelaunch_Click(object sender, RoutedEventArgs e)
         {
-            output(WorldChrMan.LocalPlayer.Slot.Address.ToString("x"));
+            new Thread(testing).Start();
+        }
+        private void testing()
+        { 
+            Launch();
+            WaitFrpgSysInit();
+            SetNoLogo();
+            WaitForTitle();
+
+
+            /*
+            UInt32 jmp = 0x2773FB;
+            UInt32 dbgmenu = 0x25db50;
+
+            output($"Setting DbgMenu start\n");
+            Hook.WUInt32(0x1402773f7, dbgmenu - jmp);
+            */
+
+
+
+
+
+            //activate hook branch
+            Hook.WByte(0x141d173d2, 1);
+            Hook.WByte(0x14015cf6a, 0x60);
+
+            //nodead + silence
+            Hook.WByte(0x141d151cf, 1);
+            Hook.WByte(0x141d151d0, 1);
+
+            SafeRemoteHandle drawString_ = new SafeRemoteHandle(0x1000);
+            SafeRemoteHandle num_ = new SafeRemoteHandle(8);
+            SafeRemoteHandle strings_ = new SafeRemoteHandle(0x800);
+            SafeRemoteHandle pos_ = new SafeRemoteHandle(0x100);
+
+
+            SafeRemoteHandle ezdrawptr_ = new SafeRemoteHandle(8);
+            SafeRemoteHandle ezdrawstringptr_ = new SafeRemoteHandle(8);
+            SafeRemoteHandle drawstringptr_ = new SafeRemoteHandle(8);
+            SafeRemoteHandle hgmanptr_ = new SafeRemoteHandle(8);
+            SafeRemoteHandle returnptr_ = new SafeRemoteHandle(8);
+            SafeRemoteHandle hookptr_ = new SafeRemoteHandle(8);
+
+
+            
+            ulong num = (ulong)num_.GetHandle();
+            ulong drawString = (ulong)drawString_.GetHandle();
+
+            ulong strings = (ulong)strings_.GetHandle();
+            ulong pos = (ulong)pos_.GetHandle();
+
+            ulong ezdrawptr = (ulong)ezdrawptr_.GetHandle();
+            ulong ezdrawstringptr = (ulong)ezdrawstringptr_.GetHandle();
+            ulong drawstringptr = (ulong)drawstringptr_.GetHandle();
+            ulong hgmanptr = (ulong)hgmanptr_.GetHandle();
+            ulong returnptr = (ulong)returnptr_.GetHandle();
+            ulong hookptr = (ulong)hookptr_.GetHandle();
+
+            ulong hookspot = 0x1403D08AD;
+            ulong returnspot = 0x1403d0b57;
+
+
+            Hook.WUInt64((long)drawstringptr, drawString);
+            Hook.WUInt64((long)ezdrawstringptr, 0x1401d6bf0);
+            Hook.WUInt64((long)returnptr, returnspot);
+            Hook.WUInt64((long)hookptr, hookspot);
+            Hook.WUInt64((long)hgmanptr, 0x141c04ed8);
+
+
+
+            Hook.WInt32((long)num, 3);
+
+            Hook.WUnicodeStr((long)strings, "Test");
+            Hook.WFloat((long)pos, 100);
+            Hook.WFloat((long)pos +4, 100);
+
+            Hook.WUnicodeStr((long)strings + 0x80, "Test2");
+            Hook.WFloat((long)pos + 0x10, 100);
+            Hook.WFloat((long)pos + 0x14, 200);
+
+            Hook.WUnicodeStr((long)strings + 0x100, "Test3");
+            Hook.WFloat((long)pos + 0x20, 100);
+            Hook.WFloat((long)pos + 0x24, 200);
+
+            var c = new Assembler(64);
+            
+            var startloop = c.CreateLabel();
+            var doneloop = c.CreateLabel();
+
+            c.push(rax);
+            c.push(rcx);
+            c.push(rdx);
+            c.push(rbx);
+            c.push(rbp);
+            c.push(rsi);
+            c.push(rdi);
+            c.pushfq();
+            c.sub(rsp, 0x100);
+
+            c.mov(rcx, __[hgmanptr]);
+            c.mov(rcx, __[rcx]);
+            c.mov(rcx, __[rcx + 0x60]);
+            c.mov(__[ezdrawptr], rcx);
+
+            c.xor(r11, r11);
+            c.xor(r12, r12);
+            c.xor(r13, r13);
+            c.xor(r14, r14);
+
+            c.mov(r11, __[num]);
+            c.cmp(r11, r12);
+            c.je(doneloop);
+
+            c.Label(ref startloop);
+            c.mov(rcx, __[ezdrawptr]);
+
+            c.mov(r8, strings);
+            c.mov(r13, 0x80);
+            c.imul(r13, r12);
+            c.add(r8, r13);
+
+            c.mov(rdx, pos);
+            c.mov(r13, 0x10);
+            c.imul(r13, r12);
+            c.add(rdx, r13);
+
+            c.push(r11);
+            c.push(r12);
+            c.sub(rsp, 0x40);
+
+            c.call(__qword_ptr[ezdrawstringptr]);
+
+            c.add(rsp, 0x40);
+            c.pop(r12);
+            c.pop(r11);
+
+            c.inc(r12);
+            c.cmp(r11, r12);
+            c.jne(startloop);
+
+            c.Label(ref doneloop);
+            c.add(rsp, 0x100);
+            c.popfq();
+            c.pop(rdi);
+            c.pop(rsi);
+            c.pop(rbp);
+            c.pop(rbx);
+            c.pop(rdx);
+            c.pop(rcx);
+            c.pop(rax);
+
+            c.jmp(__qword_ptr[returnptr]);
+
+            var stream = new MemoryStream();
+            c.Assemble(new StreamCodeWriter(stream), drawString);
+
+            Hook.WBytes((IntPtr)drawString, stream.ToArray());
+
+
+
+
+            c = new Assembler(64);
+            c.PreferVex = false;
+            c.jmp(__qword_ptr[drawstringptr]);
+
+            stream = new MemoryStream();
+            c.Assemble(new StreamCodeWriter(stream), hookspot);
+            Hook.WBytes((IntPtr)hookspot, stream.ToArray());
+
+
+
+
+            while (true)
+            {
+
+                try
+                {
+                    //Hook.WFloat((long)pos, MouseMan.X);
+                    //Hook.WFloat((long)pos + 4, MouseMan.Y);
+
+                    //Hook.WFloat((long)pos + 0x10, MouseMan.X);
+                    //Hook.WFloat((long)pos + 0x14, MouseMan.Y + 50);
+
+                    Hook.WFloat((long)pos + 0, 100);
+                    Hook.WFloat((long)pos + 4, 600);
+
+                    Hook.WFloat((long)pos + 0x10, 100);
+                    Hook.WFloat((long)pos + 0x14, 630);
+
+                    Hook.WFloat((long)pos + 0x20, 600);
+                    Hook.WFloat((long)pos + 0x24, 900);
+
+                    Hook.WUnicodeStr((long)strings + 0x100, Hook.RUnicodeStr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(0x141d151b0) + 0x68) + 0x370) + 0x78) + 0x8), 0x1f));
+
+
+                    if (WorldChrMan.LocalPlayer.TargetHandle > 0)
+                    {
+                        Hook.WUnicodeStr((long)strings, WorldChrMan.LocalPlayer.GetTargetAsEnemy().ModelName);
+                        Hook.WUnicodeStr((long)strings + 0x80, WorldChrMan.LocalPlayer.GetTargetAsEnemy().BleedResist.ToString() + " / " + WorldChrMan.LocalPlayer.GetTargetAsEnemy().MaxBleedResist.ToString());
+
+                    }
+                    else
+                    {
+                        Hook.WUnicodeStr((long)strings, " ");
+                        Hook.WUnicodeStr((long)strings + 0x80, " ");
+                    }
+                }
+               catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+
+            }
+
         }
 
         private void BtnBleedDisp_Click(object sender, RoutedEventArgs e)
@@ -334,8 +551,8 @@ namespace Dss_Test2
                 while (true)
                 {
 
-                    //ChrDbg.PlayerHide = true;
-                    //ChrDbg.PlayerNoDead = true;
+                    ChrDbg.PlayerHide = true;
+                    ChrDbg.PlayerNoDead = true;
                     ChrDbg.ShowAltimeter = MenuMan.LockIconVisible;
                     GameRend.DisplayVelocityMap = MenuMan.LockIconVisible;
                     RenderTargetMan.VelocityMapFilter = 0x8000002e;
@@ -371,29 +588,68 @@ namespace Dss_Test2
                     Point tgt = new Point(0, 0);
 
                     GameRend.VelocityMapHeight = 10;
+                    if (MenuMan.BossGauge1_Enabled > -1)
+                    {
+                        //Enemy nmes = WorldChrMan.GetEnemies().Find(x => x
+
+                    }
+
                     if (MenuMan.LockIconVisible)
                     {
                         Enemy target = WorldChrMan.LocalPlayer.GetTargetAsEnemy();
                         float BleedRatio = ((float)target.BleedResist / (float)target.MaxBleedResist);
-                        GameRend.VelocityMapWidth = 200 * BleedRatio;
 
-                        tgt.X = MenuMan.LockIconXPos;
-                        tgt.Y = MenuMan.LockIconYPos;
 
-                        GameRend.VelocityMapXPos = (float)tgt.X - (100 - GameRend.VelocityMapWidth / 2);
-                        GameRend.VelocityMapYPos = (float)tgt.Y - 50;
+                        if (MenuMan.BossGauge1_Enabled > -1)
+                        {
+                            GameRend.VelocityMapWidth = 875 * (1 - BleedRatio);
+                            Console.WriteLine(target.Address.ToString("X"));
 
-                        Hook.WFloat(l1p1x, (float)tgt.X - 100);
-                        Hook.WFloat(l1p1y, (float)tgt.Y - 55);
+                            tgt.X = 560;
+                            tgt.Y = 900;
 
-                        Hook.WFloat(l1p2x, (float)tgt.X - 100);
-                        Hook.WFloat(l1p2y, (float)tgt.Y - 45);
 
-                        Hook.WFloat(l2p1x, (float)tgt.X + 100);
-                        Hook.WFloat(l2p1y, (float)tgt.Y - 55);
+                            GameRend.VelocityMapXPos = (float)tgt.X + 830 -  (875 - GameRend.VelocityMapWidth / 2);
+                            GameRend.VelocityMapYPos = (float)tgt.Y + 25;
 
-                        Hook.WFloat(l2p2x, (float)tgt.X + 100);
-                        Hook.WFloat(l2p2y, (float)tgt.Y - 45);
+                            Hook.WFloat(l1p1x, (float)tgt.X - 45);
+                            Hook.WFloat(l1p1y, (float)tgt.Y + 30);
+
+                            Hook.WFloat(l1p2x, (float)tgt.X - 45);
+                            Hook.WFloat(l1p2y, (float)tgt.Y + 20);
+
+                            Hook.WFloat(l2p1x, (float)tgt.X + 830);
+                            Hook.WFloat(l2p1y, (float)tgt.Y + 30);
+
+                            Hook.WFloat(l2p2x, (float)tgt.X + 830);
+                            Hook.WFloat(l2p2y, (float)tgt.Y + 20);
+                        }
+                        else
+                        {
+
+                            GameRend.VelocityMapWidth = 120 * (1 - BleedRatio);
+                            Console.WriteLine(target.Address.ToString("X"));
+
+                            tgt.X = MenuMan.FloatingHPBar1xpos / (float)1280 * (float)HgMan.ScreenWidth;
+                            tgt.Y = MenuMan.FloatingHPBar1ypos / (float)720 * (float)HgMan.ScreenHeight;
+
+                            GameRend.VelocityMapXPos = (float)tgt.X + 75 - (120 - GameRend.VelocityMapWidth / 2);
+                            GameRend.VelocityMapYPos = (float)tgt.Y + 25;
+
+                            Hook.WFloat(l1p1x, (float)tgt.X - 45);
+                            Hook.WFloat(l1p1y, (float)tgt.Y + 30);
+
+                            Hook.WFloat(l1p2x, (float)tgt.X - 45);
+                            Hook.WFloat(l1p2y, (float)tgt.Y + 20);
+
+                            Hook.WFloat(l2p1x, (float)tgt.X + 75);
+                            Hook.WFloat(l2p1y, (float)tgt.Y + 30);
+
+                            Hook.WFloat(l2p2x, (float)tgt.X + 75);
+                            Hook.WFloat(l2p2y, (float)tgt.Y + 20);
+                        }
+                        
+                        
                     }
 
                     Thread.Sleep(10);
