@@ -23,6 +23,7 @@
         <Button x:Name="btnExit" Content="Exit" HorizontalAlignment="Left" Margin="4,464,0,0" VerticalAlignment="Top" Width="75" Click="btnExit_Click"/>
         <Button x:Name="btnRelaunch" Content="Relaunch" HorizontalAlignment="Left" Margin="4,439,0,0" VerticalAlignment="Top" Width="75" Click="btnRelaunch_Click"/>
         <Button x:Name="btnBleedDisp" Content="BleedDisp" HorizontalAlignment="Left" Margin="4,244,0,0" VerticalAlignment="Top" Width="75" Click="BtnBleedDisp_Click"/>
+        <Button x:Name="btnDbgRestore" Content="DbgRestore" HorizontalAlignment="Left" Margin="4,145,0,0" VerticalAlignment="Top" Width="75" Click="BtnDbgRestore_Click"/>
 
     </Grid>
 </Window>
