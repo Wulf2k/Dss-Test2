@@ -24,6 +24,8 @@
         <Button x:Name="btnRelaunch" Content="Relaunch" HorizontalAlignment="Left" Margin="4,439,0,0" VerticalAlignment="Top" Width="75" Click="btnRelaunch_Click"/>
         <Button x:Name="btnBleedDisp" Content="BleedDisp" HorizontalAlignment="Left" Margin="4,244,0,0" VerticalAlignment="Top" Width="75" Click="BtnBleedDisp_Click"/>
         <Button x:Name="btnDbgRestore" Content="DbgRestore" HorizontalAlignment="Left" Margin="4,145,0,0" VerticalAlignment="Top" Width="75" Click="BtnDbgRestore_Click"/>
+        <Button x:Name="btnTst" Content="Tst" HorizontalAlignment="Left" Margin="4,370,0,0" VerticalAlignment="Top" Width="75" Click="btnTst_Click"/>
+        <Button x:Name="btnDeadCnt" Content="Death Count" HorizontalAlignment="Left" Margin="4,303,0,0" VerticalAlignment="Top" Width="75" Click="btnDeadCnt_Click"/>
 
     </Grid>
 </Window>

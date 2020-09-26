@@ -26,6 +26,7 @@ namespace Dss_Test2
         public System.Windows.Forms.Timer refresh = new System.Windows.Forms.Timer();
         Process DS = new Process();
 
+        Thread mainthread = null;
 
         public string ipc = "";
 
@@ -33,6 +34,14 @@ namespace Dss_Test2
         {
             string currDir = Microsoft.Win32.Registry.GetValue("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App 570940", "InstallLocation", null).ToString();
             string Application = $"{currDir}\\DarkSoulsRemastered.exe";
+
+
+            try
+            {
+                System.IO.File.WriteAllText($@"{currDir}\steam_appid.txt", "570940");
+            }
+            catch { };
+            
 
             DS.StartInfo.FileName = Application;
             DS.StartInfo.RedirectStandardError = true;
@@ -115,7 +124,7 @@ namespace Dss_Test2
 
             if (Hook.RInt32(0x140000000) == 0x905a4d)
             {
-                output("Existing DSR session found, please exit and relaunch.");
+                output("Existing DSR session found.");
             }
 
         }
@@ -131,19 +140,20 @@ namespace Dss_Test2
 
             if (Hook.DARKSOULS.Attached)
             {
-                try
-                {
-                    if (!DS.StandardOutput.EndOfStream)
+                if (DS.Site != null)
+                    try
                     {
-                        output($"DSStandardOutput: {DS.StandardOutput.ReadLine()}\n");
-                    }
-                    if (!DS.StandardError.EndOfStream)
-                    {
-                        output($"DSErrorOutput: {DS.StandardError.ReadLine()}\n");
-                    }
+                        if (!DS.StandardOutput.EndOfStream)
+                        {
+                            output($"DSStandardOutput: {DS.StandardOutput.ReadLine()}\n");
+                        }
+                        if (!DS.StandardError.EndOfStream)
+                        {
+                            output($"DSErrorOutput: {DS.StandardError.ReadLine()}\n");
+                        }
 
-                }
-                catch { }
+                    }
+                    catch { }
 
             }
 
@@ -313,181 +323,353 @@ namespace Dss_Test2
 
         private void btnExit_Click(object sender, RoutedEventArgs e)
         {
+            if (mainthread != null)
+            {
+                mainthread.Abort();
+                mainthread = null;
+            }
+
+
             this.Close();
         }
 
         private void btnRelaunch_Click(object sender, RoutedEventArgs e)
         {
-            new Thread(testing).Start();
+            new Thread(testing2).Start();
         }
         private void testing()
-        { 
-            Launch();
-            WaitForBoot();
-            SetNoLogo();
-            WaitForTitle();
-
-
-            EzDrawHook.Hook();
-            EzDrawHook.SetHook(1);
-
-            EzDrawHook.Text[] txts = new EzDrawHook.Text[8];
-            EzDrawHook.Box[] boxes = new EzDrawHook.Box[8];
-
-            Vector2 scrRatio = HgMan.ScreenSize / new Vector2(1280, 720);
-            
-
-            for (int x = 0; x < 8; x++)
+        {
+            if (FrpgSystem.Address == IntPtr.Zero)
             {
-                boxes[x] = new EzDrawHook.Box();
-                txts[x] = new EzDrawHook.Text();
-                boxes[x].Size = new Vector2(120, 10);
-
+                Launch();
+                WaitForBoot();
+                SetNoLogo();
+                WaitForTitle();
             }
-
-            EzDrawHook.Sphere sph = new EzDrawHook.Sphere();
-            EzDrawHook.Cylinder cyl = new EzDrawHook.Cylinder();
-
-            cyl.Pos = new Vector3(30, 30, 0);
-
-            IntPtr test = IntPtr.Zero;
-
-            while (true)
+            
+            try
             {
-                try
+
+                
+                
+                EzDrawHook.Hook3();
+
+                EzDrawHook.Box soulbox = new EzDrawHook.Box();
+                EzDrawHook.Text soultxt = new EzDrawHook.Text();
+                EzDrawHook.Sphere humsph = new EzDrawHook.Sphere();
+                EzDrawHook.Text humtxt = new EzDrawHook.Text();
+                EzDrawHook.Box maxhpbox = new EzDrawHook.Box();
+                EzDrawHook.Box hpbox = new EzDrawHook.Box();
+                EzDrawHook.Text hptxt = new EzDrawHook.Text();
+                EzDrawHook.Box maxstambox = new EzDrawHook.Box();
+                EzDrawHook.Box stambox = new EzDrawHook.Box();
+                EzDrawHook.Text stamtxt = new EzDrawHook.Text();
+                
+
+
+                while ((FrpgSystem.Address != IntPtr.Zero) && (MenuMan.GestureMenuState == 0))
                 {
-
-                    //Enemy target = WorldChrMan.LocalPlayer.GetTargetAsEnemy();
-                    //float BleedRatio = ((float)target.BleedResist / (float)target.MaxBleedResist);
-                    float BleedRatio = (float)1;
-                    
-                    for (int x = 0; x < 8; x++)
-                        if ((MenuMan.HpBars[x].Visible > -1) && (MenuMan.HpBars[x].Pos.X > 0) && (MenuMan.HpBars[x].Pos.Y > 0) && (MenuMan.HpBars[x].Handle > -1))
-                        {
-                            boxes[x].State = 7;
-                            boxes[x].Pos = MenuMan.HpBars[x].Pos * scrRatio + new Vector2(15, 25);
-
-                            txts[x].TextColor = Color.Red;
-                            txts[x].Pos = MenuMan.HpBars[x].Pos * scrRatio + new Vector2(15, 45);
-                            //txts[x].Txt = MenuMan.HpBars[x].Handle.ToString("X");
-
-                            try
-                            {
-                                Enemy nme = Enemy.FromPtr(GetPlayerInsFromHandle(MenuMan.HpBars[x].Handle));
-                                txts[x].Txt = MenuMan.HpBars[x].Handle.ToString("X") + " " + nme.BleedResist + " / " + nme.MaxBleedResist;
-                                
-                            }
-                            catch { }
-
-                        }
-                        else
-                        {
-                            boxes[x].State = 0;
-                            txts[x].TextColor = Color.FromArgb(0);
-                        }
-
-                    if (Hook.RByte(0x141d151c9) == 1)
+                    try
                     {
-                        test = GetPlayerInsFromHandle(WorldChrMan.LocalPlayer.TargetHandle);
-                        Hook.WByte(0x141d151c9, 0);
-                    }
 
+                        Vector2 pixRatio = FrpgWindow.DisplaySize / new Vector2(1000, 1000);
+                        Vector2 txtRatio = FrpgWindow.WindowSize / new Vector2(1000, 1000);
+
+
+
+                        soulbox.Color1 = Color.DeepPink;
+                        soulbox.Color2 = Color.DeepPink;
+                        soulbox.Size = new Vector2(150, 40) * pixRatio;
+                        soulbox.Pos = new Vector2(800, 910) * pixRatio;
+
+                        soultxt.TextColor = Color.Azure;
+                        soultxt.Size = 20;
+                        soultxt.Pos = new Vector2(825, 915) * txtRatio;
+                        soultxt.Txt = "00000000";
 
                         
-                }
-               catch (Exception ex)
-               {
-                   Console.WriteLine(ex.Message);
-                }
+                        humsph.Color1 = Color.Blue;
+                        humsph.Color2 = Color.Red;
+                        humsph.Size = new Vector3(50, 50, 0) * new Vector3(pixRatio, 0);
+                        humsph.Pos = new Vector3(100, 100, 0) * new Vector3(pixRatio, 0);
 
+
+                        humtxt.TextColor = Color.Cyan;
+                        humtxt.Size = 30;
+                        humtxt.Pos = new Vector2(75, 75) * txtRatio;
+                        humtxt.Txt = "00";
+
+                        maxhpbox.Color1 = Color.Teal;
+                        maxhpbox.Color2 = Color.Purple;
+                        maxhpbox.Size = new Vector2(WorldChrMan.LocalPlayer.Stats.MaxHP * 0.75f, 40) * pixRatio;
+                        maxhpbox.Pos = new Vector2(165, 50) * pixRatio;
+
+                        hpbox.Color1 = Color.DarkGoldenrod;
+                        hpbox.Color2 = Color.DarkGoldenrod;
+                        hpbox.Size = new Vector2(WorldChrMan.LocalPlayer.Stats.HP * 0.75f, 40) * pixRatio;
+                        hpbox.Pos = new Vector2(165, 50) * pixRatio;
+
+                        hptxt.TextColor = Color.Cyan;
+                        hptxt.Size = 20;
+                        hptxt.Pos = new Vector2(170, 55) * txtRatio;
+                        hptxt.Txt = $@"{WorldChrMan.LocalPlayer.HP}/{WorldChrMan.LocalPlayer.MaxHP}";
+
+                        maxstambox.Color1 = Color.Purple;
+                        maxstambox.Color2 = Color.Teal;
+                        maxstambox.Size = new Vector2(WorldChrMan.LocalPlayer.Stats.MaxStamina * 2, 40) * pixRatio;
+                        maxstambox.Pos = new Vector2(165, 100) * pixRatio;
+
+                        stambox.Color1 = Color.DarkSeaGreen;
+                        stambox.Color2 = Color.DarkSeaGreen;
+                        stambox.Size = new Vector2(WorldChrMan.LocalPlayer.Stats.Stamina * 2, 40) * pixRatio;
+                        stambox.Pos = new Vector2(165, 100) * pixRatio;
+
+                        stamtxt.TextColor = Color.Cyan;
+                        stamtxt.Size = 20;
+                        stamtxt.Pos = new Vector2(170, 105) * txtRatio;
+                        stamtxt.Txt = $@"{WorldChrMan.LocalPlayer.Stats.Stamina}/{WorldChrMan.LocalPlayer.Stats.MaxStamina}";
+
+                        //if (nmecount > 0)
+                        //{
+                        //if (lastdpad != PadMan.dpad)
+                        //{
+                        //if (PadMan.dpad == 4)  //left
+                        ///idx--;
+                        //if (PadMan.dpad == 8)
+                        //idx++;
+                        //if (idx < 0)
+                        ///idx = WorldChrMan.GetEnemies().Count - 1;
+                        //if (idx > WorldChrMan.GetEnemies().Count - 1)
+                        //idx = 0;
+                        //lastdpad = PadMan.dpad;
+                        //}
+
+                        //Player player = WorldChrMan.LocalPlayer;
+                        //Enemy nme = WorldChrMan.GetEnemies()[idx];
+
+                        //chridx.Txt = idx.ToString();
+                        //chrname.Txt = nme.GetName();
+
+                        //nme.ChrCtrl.DebugPlayerControllerPtr = player.ChrCtrl.ControllerPtr;
+                        //player.WarpToEnemy(nme);
+
+                        //WorldChrManDbg.DbgViewChrIns = nme.Address;
+
+                        //player.Slot.IsDisable = true;
+                        //player.Slot.IsHide = true;
+                        //}
+
+                        //Console.WriteLine(nme.Address.ToString("X"));
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                    }
+                }
             }
-
-        }
-
-        public IntPtr GetPlayerInsFromHandle(Int32 Handle)
-        {
-            //Console.WriteLine($@"Handle: {Handle}");
-            ulong FuncAddr = 0x140371e30;
-
-            SafeRemoteHandle codeptr_ = new SafeRemoteHandle(0x1000);
-            SafeRemoteHandle valptr_ = new SafeRemoteHandle(0x10);
-            IntPtr codeptr = codeptr_.GetHandle();
-            IntPtr valptr = valptr_.GetHandle();
-
-            var c = new Assembler(64);
-            c.push(rax);
-            c.push(rbx);
-            c.push(rcx);
-            c.push(rdx);
-            c.push(rbp);
-            c.push(rsi);
-            c.push(rdi);
-            c.push(r8);
-            c.push(r9);
-            c.push(r10);
-            c.push(r11);
-            c.push(r12);
-            c.push(r13);
-            c.push(r14);
-            c.push(r15);
-            c.pushfq();
-            c.sub(rsp, 0x100);
-
-            c.mov(rbx, (ulong)valptr);
-            c.mov(__qword_ptr[rbx], 0);
-            c.mov(__qword_ptr[rbx+8], 0);
-            c.xor(rbx, rbx);
-
-
-            c.mov(rcx, (ulong)WorldChrMan.Address);
-            c.mov(rdx, Handle);
-
-
-            c.call(FuncAddr);
-
-            c.mov(rbx, (ulong)valptr);
-            c.mov(__qword_ptr[rbx], rax);
-            c.mov(__qword_ptr[rbx + 8], 1);
-
-
-            c.add(rsp, 0x100);
-            c.popfq();
-            c.pop(r8);
-            c.pop(r9);
-            c.pop(r10);
-            c.pop(r11);
-            c.pop(r12);
-            c.pop(r13);
-            c.pop(r14);
-            c.pop(r15);
-            c.pop(rdi);
-            c.pop(rsi);
-            c.pop(rbp);
-            c.pop(rdx);
-            c.pop(rcx);
-            c.pop(rbx);
-            c.pop(rax);
-            c.ret();
-
-            var stream = new MemoryStream();
-            c.Assemble(new StreamCodeWriter(stream), (ulong)codeptr);
-            Hook.WBytes(codeptr, stream.ToArray());
-
-            //Console.WriteLine(codeptr.ToString("X"));
-            uint MAX_WAIT = 1000;
-            var threadHandle = new SafeRemoteThreadHandle(codeptr_);
-            if (!threadHandle.IsClosed & !threadHandle.IsInvalid)
+            catch (Exception ex)
             {
-                Kernel32.WaitForSingleObject(threadHandle.GetHandle(), MAX_WAIT);
+                Console.WriteLine(ex.Message);
             }
 
-            UInt64 result = Hook.RUInt64(valptr);
-            threadHandle.Close();
-            threadHandle.Dispose();
-            threadHandle = null;
-
-            return (IntPtr)result;
         }
+
+
+        void testing2()
+        {
+            if (FrpgSystem.Address == IntPtr.Zero)
+            {
+                Launch();
+                WaitForBoot();
+                //DbgNodeRestore();
+
+                UInt32 jmp = 0x2773FB;
+                UInt32 prototype = 0x25a130;
+                output($"Setting Prototype start\n");
+                Hook.WUInt32(0x1402773f7, prototype - jmp);
+
+                Thread.Sleep(500);
+            }
+
+            Vector2 pixRatio = FrpgWindow.DisplaySize / new Vector2(1920, 1080);
+            Vector2 txtRatio = FrpgWindow.WindowSize / new Vector2(1920, 1080);
+
+            
+
+            UInt32 ProtoStepNum = 0;
+
+
+            while (ProtoStepNum != 4)
+            {
+                //[[[[[141c04e28]+8]+20]+58]+20]
+                ProtoStepNum = Hook.RUInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(0x141c04e28)+8)+0x20)+0x58)+0x20) + 0x10    );
+                Thread.Sleep(33);
+            }
+
+            EzDrawHook.Hook3();
+            
+
+            
+            EzDrawHook.Box titlebox = new EzDrawHook.Box();
+            EzDrawHook.Text titletxt = new EzDrawHook.Text();
+
+            titlebox.Color1 = Color.Black;
+            titlebox.Color2 = Color.Black;
+            titlebox.Size = new Vector2(200, 75) * pixRatio;
+            titlebox.Pos = new Vector2(1200, 600) * pixRatio;
+
+            titletxt.Pos = new Vector2(1250, 600) * txtRatio;
+            titletxt.Size = 45;
+            titletxt.TextColor = Color.Red;
+            titletxt.Txt = "MEME";
+            
+
+
+            
+            int loopcounter = 0;
+
+            while (ProtoStepNum == 4)
+            {
+                //[[[[[141c04e28]+8]+20]+58]+20]
+                ProtoStepNum = Hook.RUInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(0x141c04e28) + 8) + 0x20) + 0x58) + 0x20) + 0x10);
+                titletxt.TextColor = Color.FromArgb(Convert.ToByte((Hook.RFloat(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(0x141c04e28) + 8) + 0x20) + 0x58) + 0x20) + 0x38) / 3) * 255), 255, 0, 0);
+                
+                Thread.Sleep(33);
+                loopcounter++;
+
+                if (loopcounter == 200)
+                    Hook.WUInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(0x141c04e28) + 8) + 0x20) + 0x58) + 0x20) + 0x10, 0xc);
+            }
+
+            loopcounter = 0;
+
+            titlebox.Pos = new Vector2(0, 0);
+            titlebox.Size = new Vector2(FrpgWindow.DisplaySize.X, 200) * pixRatio;
+            titlebox.Color1 = Color.LightGray;
+            titlebox.Color2 = Color.LightGray;
+
+            titletxt.Pos = new Vector2(600, 75) * txtRatio;
+            titletxt.TextColor = Color.Yellow;
+            titletxt.Txt = "CHOOSE YOUR FIGHTER";
+
+            EzDrawHook.Text beattxt = new EzDrawHook.Text();
+            beattxt.Size = 30;
+            beattxt.Txt = "Dun";
+
+            Random rnd = new Random();
+
+
+            EzDrawHook.Box chrbg = new EzDrawHook.Box();
+            chrbg.Size = new Vector2(270, 710) * pixRatio;
+            chrbg.Pos = new Vector2(395, 225) * pixRatio;
+            chrbg.Color1 = Color.DarkGray;
+            chrbg.Color2 = Color.DarkGray;
+            
+            
+            EzDrawHook.Text chrname = new EzDrawHook.Text();
+            chrname.TextColor = Color.Gold;
+            chrname.Size = 25;
+            chrname.Pos = new Vector2(400, 850) * txtRatio;
+            chrname.Txt = "Sir Notappearing\nInthisfilm";
+            
+
+
+            while (loopcounter <= 40)
+            {
+                beattxt.Pos = new Vector2(rnd.Next(0, Convert.ToInt32(FrpgWindow.WindowSize.X)), rnd.Next(0, 200)) * txtRatio;
+                beattxt.TextColor = Color.FromArgb(255, rnd.Next(0, 255), rnd.Next(0, 255), rnd.Next(0, 255));
+                Thread.Sleep(250);
+                loopcounter++;
+
+                if ((loopcounter % 10) == 0)
+                    Hook.WInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(0x141c04e28) + 8) + 0x20) + 0x58) + 0x20) + 0x44, loopcounter / 10);
+            }
+
+
+            chrbg.Cleanup();
+            //chrname.Cleanup();
+            chrname.Txt = " ";
+            //beattxt.Cleanup();
+            beattxt.Txt = " ";
+
+            Thread.Sleep(1000);
+            Hook.WUInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(0x141c04e28) + 8) + 0x20) + 0x58) + 0x20) + 0x10, 0xe);
+
+            while (MenuMan.LoadingState == 0)
+                Thread.Sleep(33);
+
+
+            titlebox.Size = FrpgWindow.DisplaySize;
+            titlebox.Pos = new Vector2(0, 0);
+            titlebox.Color1 = Color.Black;
+            titlebox.Color2 = Color.Black;
+
+            titletxt.Txt = "L O A D I N G";
+            titletxt.TextColor = Color.BlanchedAlmond;
+            titletxt.Pos = new Vector2(FrpgWindow.WindowSize.X / 2 - 100, 500) * txtRatio;
+
+            while (MenuMan.LoadingState > 0)
+                Thread.Sleep(33);
+
+
+
+
+
+            Thread.Sleep(1000);
+
+            ChrDbg.PlayerHide = true;
+            ChrDbg.AllNoUpdateAI = true;
+
+
+
+            WorldChrMan.LocalPlayer.WarpToCoords(23.728f, 15.817f, -118.945f, 90.0f);
+
+            Thread.Sleep(500);
+            WorldChrMan.LocalPlayer.WarpToCoords(32.0f, 15.817f, -118.945f, 270.0f);
+
+            FreeCam.Enabled = true;
+            FreeCam.PosX = 28.5f;
+            FreeCam.PosY = 18.5f;
+            FreeCam.PosZ = -128.0f;
+            FreeCam.RotX = 0.0f;
+            FreeCam.RotY = 0.0f;
+            FreeCam.RotZ = 1.0f;
+
+            Thread.Sleep(500);
+
+            MenuMan.ActionMsgState = 0;
+            MenuMan.TextEffect = 0;
+
+            
+
+            GameDataMan.Options.HUD = false;
+
+            //1010700 = taurus
+            Enemy taurus = WorldChrMan.GetEnemyByName("c2250_0000");
+
+            Thread.Sleep(1000);
+            IngameFuncs.ForcePlayAnimation(1010700, -1);
+            taurus.WarpToCoords(25.728f, 15.8f, -119.945f, 90.0f);
+
+            titlebox.Cleanup();
+            titletxt.Cleanup();
+
+            IngameFuncs.ChangeTarget(1010700, 10000);
+            IngameFuncs.ChangeTarget(10000, 1010700);
+
+            Thread.Sleep(1000);
+
+            IngameFuncs.PlayAnimation(10000, 6500);
+            Thread.Sleep(1000);
+            IngameFuncs.ForceDead(1010700, 1);
+            GameMan.IsDisableAllAreaEvent = true;
+            GameMan.IsDisableAllAreaEne = true;
+
+
+
+        }
+        
+        
 
         
 
@@ -496,9 +678,6 @@ namespace Dss_Test2
             while (Hook.RUInt32(0x141d06ef8) == 0)
             { }
         }
-
-
-
 
         private void BtnBleedDisp_Click(object sender, RoutedEventArgs e)
         {
@@ -519,8 +698,8 @@ namespace Dss_Test2
             EzDrawHook.Box[] bars = new EzDrawHook.Box[8];
             EzDrawHook.Box[] bgs = new EzDrawHook.Box[8];
 
-            Vector2 scrRatio = HgMan.ScreenSize / new Vector2(1280, 720);
-
+            Vector2 scrRatio = FrpgWindow.DisplaySize / new Vector2(1280, 720);
+            
             for (int x = 0; x < 8; x++)
             {
                 bgs[x] = new EzDrawHook.Box();
@@ -548,7 +727,7 @@ namespace Dss_Test2
 
                             try
                             {
-                                Enemy nme = Enemy.FromPtr(GetPlayerInsFromHandle(MenuMan.HpBars[x].Handle));
+                                Enemy nme = Enemy.FromPtr(IngameFuncs.GetPlayerInsFromHandle(MenuMan.HpBars[x].Handle));
                                 BleedRatio = (float)1 - ((float)nme.BleedResist / (float)nme.MaxBleedResist);
                                 //BleedRatio = (float)0.33;
                                 bars[x].Size = new Vector2(bgs[x].Size.X * BleedRatio, bgs[x].Size.Y);
@@ -574,24 +753,130 @@ namespace Dss_Test2
 
         }
     
+        void DbgNodeRestore()
+        {
+            SafeRemoteHandle DbgMenuManFix_ = new SafeRemoteHandle(0x1000);
+            SafeRemoteHandle DbgMenuManGetNode_ = new SafeRemoteHandle(0x10);
+            IntPtr DbgMenuManFix = DbgMenuManFix_.GetHandle();
+            IntPtr DbgMenuManGetNode = DbgMenuManGetNode_.GetHandle();
+
+            var c = new Assembler(64);
+            c.jmp(0x140152b00);
+            var stream = new MemoryStream();
+            c.Assemble(new StreamCodeWriter(stream), (ulong)0x140152af0);
+            Hook.WBytes(0x140152af0, stream.ToArray());
+
+            c = new Assembler(64);
+            c.jmp((ulong)DbgMenuManGetNode);
+            stream = new MemoryStream();
+            c.Assemble(new StreamCodeWriter(stream), (ulong)0x140152b00);
+            Hook.WBytes(0x140152b00, stream.ToArray());
+
+            c = new Assembler(64);
+            Label SkipDbgMenuManGetNode = c.CreateLabel();
+            c.mov(rax, 0x141c04cc8);
+            c.mov(rax, __[rax]);
+            c.cmp(rax, 0);
+            c.je(SkipDbgMenuManGetNode);
+            c.mov(rax, __[rax + 8]);
+            c.Label(ref SkipDbgMenuManGetNode);
+            c.ret();
+            stream = new MemoryStream();
+            c.Assemble(new StreamCodeWriter(stream), (ulong)DbgMenuManGetNode);
+            Hook.WBytes(DbgMenuManGetNode, stream.ToArray());
+
+            c = new Assembler(64);
+            c.jmp((ulong)DbgMenuManFix);
+            stream = new MemoryStream();
+            c.Assemble(new StreamCodeWriter(stream), (ulong)0x140152a38);
+            Hook.WBytes(0x140152a38, stream.ToArray());
+
+            c = new Assembler(64);
+            c.mov(rcx, 0x1414acd70);
+            c.call(0x140466aa0);
+            c.mov(rcx, 0x141c04cc8);
+            c.mov(rcx, __[rcx]);
+            c.mov(__[rcx + 8], rax);
+            c.add(rsp, 0x28);
+            c.ret();
+            stream = new MemoryStream();
+            c.Assemble(new StreamCodeWriter(stream), (ulong)DbgMenuManFix);
+            Hook.WBytes(DbgMenuManFix, stream.ToArray());
+
+
+        }
 
         private void BtnDbgRestore_Click(object sender, RoutedEventArgs e)
         {
+            //Restore debug nodes, not full menu
             Launch();
-
-
 
             Hook.WUnicodeStr(0x1412d1f20, "./CAPTURE");
 
+            WaitForBoot();
+            DbgNodeRestore();
 
 
-            while (Hook.RUInt32(0x141d06ef8) == 0)
-            { }
 
-            Hook.DARKSOULS.Suspend();
-            Thread.Sleep(10000);
-            Hook.DARKSOULS.Resume();
+
+            Hook.WByte(0x14015CF6A, 0x60);
+
         }
+
+        private void btnTst_Click(object sender, RoutedEventArgs e)
+        {
+
+            EzDrawHook.Hook3();
+            EzDrawHook.Box titlebox = new EzDrawHook.Box();
+
+            titlebox.Size = new Vector2(250, 250);
+            titlebox.Pos = new Vector2(1050, 300);
+
+            titlebox.Flags = 7;
+            titlebox.TexHandle = TexMan.GetHandleTexHdlResCap("Icon00");
+
+
+            //for (int i = 0; i < TexMan.NumTexHdlResCaps; i++)
+            //Console.WriteLine(TexMan.TexHdlResCaps[i].ResName);
+
+        }
+
+        private void btnDeadCnt_Click(object sender, RoutedEventArgs e)
+        {
+            
+            new Thread(DeadCount).Start();
+        }
+
+        private void DeadCount()
+        {
+            if (FrpgSystem.Address.Equals(IntPtr.Zero))
+            {
+                Launch();
+                WaitForTitle();
+                while (MenuMan.LoadingState == 0)
+                    Thread.Sleep(33);
+                while (MenuMan.LoadingState > 0)
+                    Thread.Sleep(33);
+            }
+
+            EzDrawHook.Hook3();
+            EzDrawHook.Text deadtxt = new EzDrawHook.Text();
+
+            deadtxt.Pos = FrpgWindow.DisplaySize / new Vector2(2.5f, 1.25f);
+            deadtxt.Size = 70;
+            deadtxt.TextColor = Color.Red;
+            deadtxt.Txt = " ";
+
+            while (Hook.RInt32(0x140000000) > 0)
+            {
+                if ((WorldChrMan.LocalPlayer.HP <= 0) && (MenuMan.LoadingState == 0))
+                    deadtxt.Txt = $@"Painful Owwy Count:  {GameDataMan.DeathNum}";
+                else
+                    deadtxt.Txt = " ";
+                Thread.Sleep(33);
+            }
+        }
+
     }
 
 }
