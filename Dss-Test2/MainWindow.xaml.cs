@@ -12,11 +12,18 @@ using System.Numerics;
 using System.Drawing;
 using DarkSoulsScripting.Injection.DLL;
 
+
+
 namespace Dss_Test2
 {
 
+
     public partial class MainWindow : Window
     {
+        IntPtr SaveNameLoc = (IntPtr)0x1412db9c8;  //DSR1310
+        IntPtr CapturePathLoc = (IntPtr)0x01412d5eb0;  //DSR1310
+
+
         [DllImport("ntdll.dll", SetLastError = true)]
         public static extern IntPtr NtResumeProcess(IntPtr ProcessHandle);
         [DllImport("ntdll.dll", SetLastError = false)]
@@ -57,11 +64,12 @@ namespace Dss_Test2
         void SetNoLogo()
         {
             output($"Setting NoLogo\n");
-            Hook.WByte(0x14070c599, 1);
+            //ProcessLogoCurrentState function cmp
+            Hook.WByte(0x14070f269, 1);  //DSR1310
         }
         void WaitFrpgSysInit()
         {
-            while ((Hook.RIntPtr(0x141C04E28) == IntPtr.Zero) && (Hook.RInt32(0x140000000) == 0x905a4d)) { }
+            while ((Hook.RIntPtr(FrpgSystem.Address) == IntPtr.Zero) && (Hook.RInt32(0x140000000) == 0x905a4d)) { }
         }
         void WaitForTitle()
         {
@@ -69,7 +77,11 @@ namespace Dss_Test2
             bool loop = true;
             while (loop && (Hook.RInt32(0x140000000) == 0x905a4d))
             {
-                loop = (Hook.RInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(0x141c04e28) + 0x8) + 0x20) + 0x58) + 0x20) + 0x10) < 0xB);
+                IntPtr tmpptr = Hook.RIntPtr(FrpgSystem.Address + 8);
+                tmpptr = Hook.RIntPtr(tmpptr + 0x20);
+                tmpptr = Hook.RIntPtr(tmpptr + 0x58);
+                tmpptr = Hook.RIntPtr(tmpptr + 0x20);
+                loop = (Hook.RInt32(tmpptr + 0x10) < 0xB);
                 Thread.Sleep(33);
             }
             output("Reached titlescreen\n");
@@ -85,7 +97,11 @@ namespace Dss_Test2
                     if (Hook.RInt32(0x140000000) == 0x905a4d)
                     {
                         //In case kill fails for some reason, will still attempt exit
-                        Hook.WInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(0x141c04e28) + 0x8) + 0x20) + 0x58) + 0x20) + 0x10, 0x80);
+                        IntPtr tmpptr = Hook.RIntPtr(FrpgSystem.Address + 0x8);
+                        tmpptr = Hook.RIntPtr(tmpptr + 0x20);
+                        tmpptr = Hook.RIntPtr(tmpptr + 0x58);
+                        tmpptr = Hook.RIntPtr(tmpptr + 0x20);
+                        Hook.WInt32(tmpptr + 0x10, 0x80);
 
                         try
                         {
@@ -102,15 +118,16 @@ namespace Dss_Test2
         void NukeServerNames()
         {
             output($"Nuking FromSoft server names.\n");
-            Hook.WAsciiStr(0x1413ff8c8, "tcp://nope.nope\0");
-            Hook.WAsciiStr(0x1413ff900, "tcp://nope.nope\0");
-            Hook.WAsciiStr(0x1413ff938, "tcp://nope.nope\0");
-            Hook.WAsciiStr(0x1413ff970, "tcp://nope.nope\0");
-            Hook.WAsciiStr(0x1713ff9a8, "tcp://nope.nope\0");
-            Hook.WAsciiStr(0x1413ff9e0, "tcp://nope.nope\0");
-            Hook.WAsciiStr(0x1413ffa18, "tcp://nope.nope\0");
-            Hook.WAsciiStr(0x1413ffa50, "tcp://nope.nope\0");
-            Hook.WAsciiStr(0x1413ffa88, "tcp://nope.nope\0");
+            //dsr1310
+            Hook.WAsciiStr(0x141403a58, "tcp://nope.nope\0"); 
+            Hook.WAsciiStr(0x141403a90, "tcp://nope.nope\0");
+            Hook.WAsciiStr(0x141403ac8, "tcp://nope.nope\0");
+            Hook.WAsciiStr(0x141403b00, "tcp://nope.nope\0");
+            Hook.WAsciiStr(0x141403b38, "tcp://nope.nope\0");
+            Hook.WAsciiStr(0x141403b70, "tcp://nope.nope\0");
+            Hook.WAsciiStr(0x141403ba8, "tcp://nope.nope\0");
+            Hook.WAsciiStr(0x141403be0, "tcp://nope.nope\0");
+            Hook.WAsciiStr(0x141403c18, "tcp://nope.nope\0");
         }
 
 
@@ -186,7 +203,7 @@ namespace Dss_Test2
             NukeServerNames();
 
             output("Redirecting save to DSPOO\n");
-            Hook.WUnicodeStr(0x1412d7a38, "DSPOO");
+            Hook.WUnicodeStr(SaveNameLoc, "DSPOO");  //DSR1310
 
             WaitForTitle();
             new Thread(AbortIfOnlineLoop).Start();
@@ -277,13 +294,14 @@ namespace Dss_Test2
         }
         void NoLogo()
         {
+            //DSR1310
             Launch();
             WaitForBoot();
             SetNoLogo();
             NukeServerNames();
 
             output("Redirecting save to XLOGO\n");
-            Hook.WUnicodeStr(0x1412d7a38, "XLOGO");
+            Hook.WUnicodeStr(SaveNameLoc, "XLOGO");  //DSR1310
 
             WaitForTitle();
             new Thread(AbortIfOnlineLoop).Start();
@@ -291,34 +309,38 @@ namespace Dss_Test2
 
         private void BtnDbgMenu_Click(object sender, RoutedEventArgs e)
         {
+            //DSR1310
             Launch();
             WaitFrpgSysInit();
             NukeServerNames();
 
             output("Redirecting save to DEBUG\n");
-            Hook.WUnicodeStr(0x1412d7a38, "DEBUG");
+            Hook.WUnicodeStr(SaveNameLoc, "DEBUG");
 
-            UInt32 jmp = 0x2773FB;
-            UInt32 dbgmenu = 0x25db50;
+            UInt32 jmp = 0x278cab;
+            UInt32 dbgmenu = 0x25f430;  //DbgMenuStep_New
 
             output($"Setting DbgMenu start\n");
-            Hook.WUInt32(0x1402773f7, dbgmenu - jmp);
+            //SysStep_Step_7, Step = ....
+            Hook.WUInt32(0x140278ca7, dbgmenu - jmp);
         }
 
         private void BtnProto_Click(object sender, RoutedEventArgs e)
         {
+            //DSR1310
             Launch();
             WaitFrpgSysInit();
             NukeServerNames();
 
             output("Redirecting save to PROTO\n");
-            Hook.WUnicodeStr(0x1412d7a38, "PROTO");
+            Hook.WUnicodeStr(SaveNameLoc, "PROTO");
 
-            UInt32 jmp = 0x2773FB;
-            UInt32 prototype = 0x25a130;
+            UInt32 jmp = 0x278cab;
+            UInt32 prototype = 0x25ba10;  //PrototypeSelectStep_New
 
             output($"Setting Prototype start\n");
-            Hook.WUInt32(0x1402773f7, prototype - jmp);
+            //PrototypeSelectStep_New
+            Hook.WUInt32(0x140278ca7, prototype - jmp);
         }
 
         private void btnExit_Click(object sender, RoutedEventArgs e)
@@ -477,6 +499,8 @@ namespace Dss_Test2
 
         void testing2()
         {
+            return;
+            //TODO:  Update for 1310
             if (FrpgSystem.Address == IntPtr.Zero)
             {
                 Launch();
@@ -502,7 +526,7 @@ namespace Dss_Test2
             while (ProtoStepNum != 4)
             {
                 //[[[[[141c04e28]+8]+20]+58]+20]
-                ProtoStepNum = Hook.RUInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(0x141c04e28)+8)+0x20)+0x58)+0x20) + 0x10    );
+                ProtoStepNum = Hook.RUInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(FrpgSystem.Address)+8)+0x20)+0x58)+0x20) + 0x10    );
                 Thread.Sleep(33);
             }
 
@@ -531,14 +555,14 @@ namespace Dss_Test2
             while (ProtoStepNum == 4)
             {
                 //[[[[[141c04e28]+8]+20]+58]+20]
-                ProtoStepNum = Hook.RUInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(0x141c04e28) + 8) + 0x20) + 0x58) + 0x20) + 0x10);
-                titletxt.TextColor = Color.FromArgb(Convert.ToByte((Hook.RFloat(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(0x141c04e28) + 8) + 0x20) + 0x58) + 0x20) + 0x38) / 3) * 255), 255, 0, 0);
+                ProtoStepNum = Hook.RUInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(FrpgSystem.Address) + 8) + 0x20) + 0x58) + 0x20) + 0x10);
+                titletxt.TextColor = Color.FromArgb(Convert.ToByte((Hook.RFloat(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(FrpgSystem.Address) + 8) + 0x20) + 0x58) + 0x20) + 0x38) / 3) * 255), 255, 0, 0);
                 
                 Thread.Sleep(33);
                 loopcounter++;
 
                 if (loopcounter == 200)
-                    Hook.WUInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(0x141c04e28) + 8) + 0x20) + 0x58) + 0x20) + 0x10, 0xc);
+                    Hook.WUInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(FrpgSystem.Address) + 8) + 0x20) + 0x58) + 0x20) + 0x10, 0xc);
             }
 
             loopcounter = 0;
@@ -582,7 +606,7 @@ namespace Dss_Test2
                 loopcounter++;
 
                 if ((loopcounter % 10) == 0)
-                    Hook.WInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(0x141c04e28) + 8) + 0x20) + 0x58) + 0x20) + 0x44, loopcounter / 10);
+                    Hook.WInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(FrpgSystem.Address) + 8) + 0x20) + 0x58) + 0x20) + 0x44, loopcounter / 10);
             }
 
 
@@ -593,7 +617,7 @@ namespace Dss_Test2
             beattxt.Txt = " ";
 
             Thread.Sleep(1000);
-            Hook.WUInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(0x141c04e28) + 8) + 0x20) + 0x58) + 0x20) + 0x10, 0xe);
+            Hook.WUInt32(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(Hook.RIntPtr(FrpgSystem.Address) + 8) + 0x20) + 0x58) + 0x20) + 0x10, 0xe);
 
             while (MenuMan.LoadingState == 0)
                 Thread.Sleep(33);
@@ -675,7 +699,7 @@ namespace Dss_Test2
 
         private void WaitForBoot()
         {
-            while (Hook.RUInt32(0x141d06ef8) == 0)
+            while (Hook.RUInt32(FrpgWindow.Address) == 0)
             { }
         }
 
@@ -727,7 +751,9 @@ namespace Dss_Test2
 
                             try
                             {
-                                Enemy nme = Enemy.FromPtr(IngameFuncs.GetPlayerInsFromHandle(MenuMan.HpBars[x].Handle));
+                                int handle = MenuMan.HpBars[x].Handle;
+                                IntPtr tmpptr = IngameFuncs.GetPlayerInsFromHandle(handle);
+                                Enemy nme = Enemy.FromPtr(tmpptr);
                                 BleedRatio = (float)1 - ((float)nme.BleedResist / (float)nme.MaxBleedResist);
                                 //BleedRatio = (float)0.33;
                                 bars[x].Size = new Vector2(bgs[x].Size.X * BleedRatio, bgs[x].Size.Y);
@@ -755,26 +781,29 @@ namespace Dss_Test2
     
         void DbgNodeRestore()
         {
+            return;
+            //TODO:  Finish DSR1310 updating
+
             SafeRemoteHandle DbgMenuManFix_ = new SafeRemoteHandle(0x1000);
             SafeRemoteHandle DbgMenuManGetNode_ = new SafeRemoteHandle(0x10);
             IntPtr DbgMenuManFix = DbgMenuManFix_.GetHandle();
             IntPtr DbgMenuManGetNode = DbgMenuManGetNode_.GetHandle();
 
             var c = new Assembler(64);
-            c.jmp(0x140152b00);
+            c.jmp(0x140154330); //DSR1310, DbgMenuMan_Func_0
             var stream = new MemoryStream();
-            c.Assemble(new StreamCodeWriter(stream), (ulong)0x140152af0);
-            Hook.WBytes(0x140152af0, stream.ToArray());
+            c.Assemble(new StreamCodeWriter(stream), (ulong)0x140152af0);               //TODO
+            Hook.WBytes(0x140154320, stream.ToArray());  //DSR1310
 
             c = new Assembler(64);
             c.jmp((ulong)DbgMenuManGetNode);
             stream = new MemoryStream();
-            c.Assemble(new StreamCodeWriter(stream), (ulong)0x140152b00);
-            Hook.WBytes(0x140152b00, stream.ToArray());
+            c.Assemble(new StreamCodeWriter(stream), (ulong)0x140152b00);               //TODO
+            Hook.WBytes(0x140152b00, stream.ToArray());                                 //TODO
 
             c = new Assembler(64);
             Label SkipDbgMenuManGetNode = c.CreateLabel();
-            c.mov(rax, 0x141c04cc8);
+            c.mov(rax, 0x141b68cb8);  //DSR1310, DbgMenuMan
             c.mov(rax, __[rax]);
             c.cmp(rax, 0);
             c.je(SkipDbgMenuManGetNode);
@@ -788,13 +817,13 @@ namespace Dss_Test2
             c = new Assembler(64);
             c.jmp((ulong)DbgMenuManFix);
             stream = new MemoryStream();
-            c.Assemble(new StreamCodeWriter(stream), (ulong)0x140152a38);
-            Hook.WBytes(0x140152a38, stream.ToArray());
+            c.Assemble(new StreamCodeWriter(stream), (ulong)0x140152a38);               //TODO
+            Hook.WBytes(0x140152a38, stream.ToArray());                                 //TODO
 
             c = new Assembler(64);
-            c.mov(rcx, 0x1414acd70);
-            c.call(0x140466aa0);
-            c.mov(rcx, 0x141c04cc8);
+            c.mov(rcx, 0x1414b0da0);  //DSR1310, "ROOT"
+            c.call(0x1404675a0);  //DSR1310
+            c.mov(rcx, 0x141b68cb8);  //DSR1310, DbgMenuMan
             c.mov(rcx, __[rcx]);
             c.mov(__[rcx + 8], rax);
             c.add(rsp, 0x28);
@@ -811,15 +840,15 @@ namespace Dss_Test2
             //Restore debug nodes, not full menu
             Launch();
 
-            Hook.WUnicodeStr(0x1412d1f20, "./CAPTURE");
+            Hook.WUnicodeStr(CapturePathLoc, "./CAPTURE");
 
             WaitForBoot();
-            DbgNodeRestore();
+            DbgNodeRestore();                                                           //TODO
 
 
 
 
-            Hook.WByte(0x14015CF6A, 0x60);
+            Hook.WByte(0x14015e79a, 0x60);  //DSR1310
 
         }
 
